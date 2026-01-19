@@ -211,6 +211,33 @@ function cmdSearch(query: string) {
   console.log("");
 }
 
+function cmdDump(options: { limit?: number; transcripts?: boolean }) {
+  const meetings = loadMeetings();
+  const toShow = options.limit ? meetings.slice(0, options.limit) : meetings;
+
+  console.log(`# Granola Meeting Notes`);
+  console.log(`\nTotal meetings: ${toShow.length}${options.limit ? ` (of ${meetings.length})` : ""}`);
+  console.log(`Generated: ${new Date().toISOString()}\n`);
+
+  for (const m of toShow) {
+    console.log(`---\n`);
+    console.log(`## ${m.title}`);
+    console.log(`**Date:** ${formatDate(m.created_at)}\n`);
+
+    if (m.summary) {
+      console.log(`### Summary\n`);
+      console.log(m.summary);
+      console.log("");
+    }
+
+    if (options.transcripts && m.transcript) {
+      console.log(`### Transcript\n`);
+      console.log(m.transcript);
+      console.log("");
+    }
+  }
+}
+
 function printHelp() {
   console.log(`
 granola - CLI tool for Granola meeting notes
@@ -220,6 +247,9 @@ USAGE:
   granola show <search>        Show meeting summary by title search
   granola transcript <search>  Show full transcript
   granola search <query>       Search across all meeting content
+  granola dump [options]       Dump all meetings for AI context
+    --limit N                  Limit to N most recent meetings
+    --transcripts              Include full transcripts (large!)
   granola help                 Show this help message
 
 EXAMPLES:
@@ -227,6 +257,8 @@ EXAMPLES:
   granola show "wedding"
   granola transcript "standup"
   granola search "project deadline"
+  granola dump --limit 20
+  granola dump --transcripts --limit 10
 `);
 }
 
@@ -269,6 +301,16 @@ switch (command) {
       process.exit(1);
     }
     cmdSearch(query);
+    break;
+  }
+  case "dump": {
+    let limit: number | undefined;
+    const limitIdx = args.indexOf("--limit");
+    if (limitIdx !== -1 && args[limitIdx + 1]) {
+      limit = parseInt(args[limitIdx + 1], 10) || undefined;
+    }
+    const transcripts = args.includes("--transcripts");
+    cmdDump({ limit, transcripts });
     break;
   }
   case "help":
