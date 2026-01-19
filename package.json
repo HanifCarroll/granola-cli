@@ -1,0 +1,24 @@
+{
+  "name": "granola-cli",
+  "version": "1.0.0",
+  "description": "CLI for accessing Granola meeting notes and transcripts",
+  "type": "module",
+  "bin": {
+    "granola": "./granola.ts"
+  },
+  "scripts": {
+    "install-global": "bun link"
+  },
+  "keywords": [
+    "granola",
+    "cli",
+    "meetings",
+    "transcripts",
+    "notes"
+  ],
+  "author": "Hanif Carroll",
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
