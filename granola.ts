@@ -120,20 +120,25 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function shortId(id: string): string {
+  return id.substring(0, 8);
+}
+
 function cmdList(limit: number = 10) {
   const meetings = loadMeetings();
   const toShow = meetings.slice(0, limit);
 
   console.log(`\n📅 Recent Meetings (${toShow.length} of ${meetings.length})\n`);
-  console.log("─".repeat(60));
+  console.log("─".repeat(75));
 
   for (const m of toShow) {
     const date = formatDate(m.created_at);
     const hasTranscript = m.transcript ? "📝" : "  ";
     const hasSummary = m.summary ? "📋" : "  ";
-    console.log(`${hasTranscript}${hasSummary} ${date.padEnd(20)} ${m.title}`);
+    const sid = shortId(m.id);
+    console.log(`${hasTranscript}${hasSummary} [${sid}] ${date.padEnd(20)} ${m.title}`);
   }
-  console.log("─".repeat(60));
+  console.log("─".repeat(75));
   console.log("\n📝 = has transcript, 📋 = has summary\n");
 }
 
@@ -200,10 +205,11 @@ function cmdSearch(query: string) {
   }
 
   console.log(`\n🔍 Search results for "${query}" (${results.length} found)\n`);
-  console.log("─".repeat(60));
+  console.log("─".repeat(75));
 
   for (const { meeting, context } of results) {
-    console.log(`\n📅 ${formatDate(meeting.created_at)} - ${meeting.title}`);
+    const sid = shortId(meeting.id);
+    console.log(`\n[${sid}] 📅 ${formatDate(meeting.created_at)} - ${meeting.title}`);
     if (context) {
       console.log(`   ${context}`);
     }
@@ -238,19 +244,65 @@ function cmdDump(options: { limit?: number; transcripts?: boolean }) {
   }
 }
 
+function cmdContext(ids: string[], options: { transcripts?: boolean }) {
+  const meetings = loadMeetings();
+  const selected: Meeting[] = [];
+
+  for (const id of ids) {
+    const match = meetings.find(m => m.id.startsWith(id));
+    if (match) {
+      selected.push(match);
+    } else {
+      console.error(`Warning: No meeting found for ID "${id}"`);
+    }
+  }
+
+  if (selected.length === 0) {
+    console.error("No meetings found for provided IDs");
+    process.exit(1);
+  }
+
+  console.log(`# Selected Meeting Notes`);
+  console.log(`\nMeetings: ${selected.length}`);
+  console.log(`Generated: ${new Date().toISOString()}\n`);
+
+  for (const m of selected) {
+    console.log(`---\n`);
+    console.log(`## ${m.title}`);
+    console.log(`**Date:** ${formatDate(m.created_at)}`);
+    console.log(`**ID:** ${shortId(m.id)}\n`);
+
+    if (m.summary) {
+      console.log(`### Summary\n`);
+      console.log(m.summary);
+      console.log("");
+    }
+
+    if (options.transcripts && m.transcript) {
+      console.log(`### Transcript\n`);
+      console.log(m.transcript);
+      console.log("");
+    } else if (!options.transcripts && m.transcript) {
+      console.log(`_Transcript available (${m.transcript.length} chars) - use --transcripts to include_\n`);
+    }
+  }
+}
+
 function printHelp() {
   console.log(`
 granola - CLI tool for Granola meeting notes
 
 USAGE:
-  granola list [--limit N]     List recent meetings (default 10)
-  granola show <search>        Show meeting summary by title search
-  granola transcript <search>  Show full transcript
-  granola search <query>       Search across all meeting content
-  granola dump [options]       Dump all meetings for AI context
-    --limit N                  Limit to N most recent meetings
-    --transcripts              Include full transcripts (large!)
-  granola help                 Show this help message
+  granola list [--limit N]       List recent meetings (default 10)
+  granola show <search>          Show meeting summary by title search
+  granola transcript <search>    Show full transcript
+  granola search <query>         Search across all meeting content
+  granola dump [options]         Dump all meetings for AI context
+    --limit N                    Limit to N most recent meetings
+    --transcripts                Include full transcripts (large!)
+  granola context <id> [ids...]  Load specific meetings by ID
+    --transcripts                Include full transcripts
+  granola help                   Show this help message
 
 EXAMPLES:
   granola list --limit 5
@@ -258,7 +310,7 @@ EXAMPLES:
   granola transcript "standup"
   granola search "project deadline"
   granola dump --limit 20
-  granola dump --transcripts --limit 10
+  granola context 26f3f793 90209d18 --transcripts
 `);
 }
 
@@ -311,6 +363,16 @@ switch (command) {
     }
     const transcripts = args.includes("--transcripts");
     cmdDump({ limit, transcripts });
+    break;
+  }
+  case "context": {
+    const transcripts = args.includes("--transcripts");
+    const ids = args.slice(1).filter(a => !a.startsWith("--"));
+    if (ids.length === 0) {
+      console.error("Usage: granola context <id> [id2] [id3]... [--transcripts]");
+      process.exit(1);
+    }
+    cmdContext(ids, { transcripts });
     break;
   }
   case "help":
