@@ -58,7 +58,42 @@ granola context 26f3f793 90209d18 --transcripts
 
 ## How it works
 
-Reads from Granola's local cache file at `~/Library/Application Support/Granola/cache-v3.json`.
+Granola stores all meeting data locally in a cache file, and this CLI reads directly from that cache—no API calls or network requests required.
+
+### Cache Location
+
+```
+~/Library/Application Support/Granola/cache-v3.json
+```
+
+### Cache Structure
+
+The cache contains a nested JSON structure with three main data stores:
+
+- **`documents`** - Meeting metadata including title, creation date, and notes (as markdown or ProseMirror format)
+- **`transcripts`** - Full meeting transcripts with speaker attribution and timestamps
+- **`documentPanels`** - Panel content in ProseMirror document format (used when `notes_markdown` isn't available)
+
+### Data Flow
+
+```
+Granola App → cache-v3.json → granola-cli → Terminal/AI Assistant
+```
+
+1. The Granola desktop app syncs meeting data to the local cache
+2. This CLI reads and parses the cache file on each command
+3. Meetings are sorted by date and formatted for display or AI context
+
+### Benefits of Cache-Based Approach
+
+- **Offline access** - Works without internet once meetings are synced
+- **Fast** - No API latency, just local file reads
+- **Private** - Data never leaves your machine
+- **AI-friendly** - Output formats designed for loading into AI assistants
+
+### Note on Data Freshness
+
+The cache updates when the Granola app syncs. If you don't see recent meetings, open Granola to trigger a sync.
 
 ## License
 
